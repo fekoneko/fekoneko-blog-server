@@ -1,0 +1,22 @@
+{
+  "name": "fekoneko-blog-server",
+  "version": "1.0.0",
+  "description": "Backend part of fekoneko blog",
+  "main": "build/server.js",
+  "scripts": {
+    "start": "tsc -b && node build/server.js",
+    "dev": "run-p dev-ts dev-node",
+    "dev-ts": "tsc -w",
+    "dev-node": "nodemon build/server.js"
+  },
+  "author": "fekoneko",
+  "license": "ISC",
+  "devDependencies": {
+    "nodemon": "^2.0.21",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^4.9.5"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
