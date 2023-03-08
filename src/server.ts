@@ -4,7 +4,7 @@ import log from './log';
 import { PostInterface } from './interfaces';
 import { addPost, deletePost, editPost, validatePost, validatePostPartial } from './postFunctions';
 import { existsSync } from 'fs';
-import { PORT, REACT_URL, POSTS_API, POSTS_DATA_PATH } from './config';
+import { PORT, ALLOWED_ORIGINS, POSTS_API, POSTS_DATA_PATH } from './config';
 
 dotenv.config();
 
@@ -16,7 +16,10 @@ process.on('uncaughtException', (err) => {
 });
 
 app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', REACT_URL);
+  const origin: string | undefined = req.get('Origin');
+  if (origin !== undefined && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
   res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
   res.setHeader('Access-Control-Allow-Methods', 'PATCH,DELETE');
   next();
