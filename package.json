@@ -7,7 +7,7 @@
     "start": "tsc -b && node build/server.js",
     "dev": "run-p dev-ts dev-node",
     "dev-ts": "tsc -w",
-    "dev-node": "nodemon build/server.js"
+    "dev-node": "nodemon -w build build/server.js"
   },
   "author": "fekoneko",
   "license": "ISC",

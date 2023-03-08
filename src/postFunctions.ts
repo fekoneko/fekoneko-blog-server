@@ -12,25 +12,27 @@ const postTemplate: PostInterface = {
   publishTime: 0,
 };
 
-const findPostById = (
-  posts: Array<Required<PostInterface>>,
-  id: number
-): Required<PostInterface> | undefined => posts.find((post) => post.id === id);
+const idExists = (posts: Array<Required<PostInterface>>, id: number): boolean =>
+  posts.some((post) => post.id === id);
+
+const getIndexByPostId = (posts: Array<Required<PostInterface>>, id: number): number =>
+  posts.findIndex((post) => post.id === id);
 
 const findNewId = (posts: Array<Required<PostInterface>>): number => {
   if (posts.length === 0) return 1;
   let newId: number;
+  let shift = 1;
   do {
-    newId = posts[posts.length - 1].id + 1;
-    delete posts[posts.length - 1];
-  } while (findPostById(posts, newId));
+    newId = posts[posts.length - shift].id + 1;
+    shift++;
+    if (shift > posts.length) return 1; // Nevers
+  } while (idExists(posts, newId));
   return newId;
 };
 
 export const validatePost = (post: object, includeId: boolean): PostInterface | null => {
   const validPost: PostInterface = postTemplate;
   for (const field in postTemplate) {
-    const element = postTemplate[field as keyof PostInterface];
     if (
       field in post &&
       typeof post[field as keyof object] === typeof postTemplate[field as keyof PostInterface]
@@ -46,7 +48,24 @@ export const validatePost = (post: object, includeId: boolean): PostInterface | 
   return validPost;
 };
 
-export const addPost = async (newPost: PostInterface): Promise<void> => {
+export const validatePostPartial = (postPartial: object): Partial<PostInterface> => {
+  const validPostPartial: Partial<PostInterface> = {};
+  for (const field in postPartial) {
+    if (
+      field in postTemplate &&
+      typeof postPartial[field as keyof object] ===
+        typeof postTemplate[field as keyof PostInterface]
+    ) {
+      validPostPartial[field as keyof PostInterface] = postPartial[field as keyof object];
+    }
+  }
+  if ('id' in postPartial && typeof postPartial.id === 'number' && postPartial.id >= 1) {
+    validPostPartial.id = postPartial.id;
+  }
+  return validPostPartial;
+};
+
+export const addPost = async (newPost: PostInterface): Promise<boolean> => {
   try {
     let postsJson: string;
     if (existsSync(POSTS_DATA_PATH)) {
@@ -55,11 +74,58 @@ export const addPost = async (newPost: PostInterface): Promise<void> => {
       postsJson = '[]';
       if (!existsSync(DATA_DIR)) await mkdir(DATA_DIR);
     }
+
     const posts: Array<Required<PostInterface>> = JSON.parse(postsJson);
     newPost.id = findNewId(posts);
     posts.push(newPost as Required<PostInterface>);
-    await writeFile(POSTS_DATA_PATH, JSON.stringify(posts));
+
+    await writeFile(POSTS_DATA_PATH, JSON.stringify(posts), { encoding: DATA_ENCODING });
+    return true;
   } catch (err) {
-    log(`Unable to add post: ${(err as Error).message}`);
+    log(`Unable to add post: ${(err as Error).message}\n${(err as Error).stack}`);
+    return false;
+  }
+};
+
+export const editPost = async (
+  updatedFields: Partial<PostInterface>,
+  editId: number
+): Promise<boolean> => {
+  try {
+    if (!existsSync(POSTS_DATA_PATH)) {
+      throw new Error(`Posts data file  at ${POSTS_DATA_PATH} does not exist`);
+    }
+    const postsJson: string = await readFile(POSTS_DATA_PATH, { encoding: DATA_ENCODING });
+
+    const posts: Array<Required<PostInterface>> = JSON.parse(postsJson);
+    const editIndex = getIndexByPostId(posts, editId);
+    if (editIndex === -1) {
+      throw new Error(`Post with id ${editId} does not exist`);
+    }
+    posts[editIndex] = { ...posts[editIndex], ...updatedFields };
+
+    await writeFile(POSTS_DATA_PATH, JSON.stringify(posts), { encoding: DATA_ENCODING });
+    return true;
+  } catch (err) {
+    log(`Unable to edit post: ${(err as Error).message}\n${(err as Error).stack}`);
+    return false;
+  }
+};
+
+export const deletePost = async (deleteId: number): Promise<boolean> => {
+  try {
+    if (!existsSync(POSTS_DATA_PATH)) {
+      throw new Error(`Posts data file  at ${POSTS_DATA_PATH} does not exist`);
+    }
+    const postsJson: string = await readFile(POSTS_DATA_PATH, { encoding: DATA_ENCODING });
+
+    let posts: Array<Required<PostInterface>> = JSON.parse(postsJson);
+    posts = posts.filter((post) => post.id !== deleteId);
+
+    await writeFile(POSTS_DATA_PATH, JSON.stringify(posts), { encoding: DATA_ENCODING });
+    return true;
+  } catch (err) {
+    log(`Unable to delete post: ${(err as Error).message}\n${(err as Error).stack}`);
+    return false;
   }
 };

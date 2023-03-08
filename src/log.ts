@@ -14,7 +14,7 @@ const log = async (message: string) => {
       `${format(new Date(), 'dd.MM.yyyy\tHH:mm:ss')}\t${message}\n`
     );
   } catch (err) {
-    console.log(`Unable to log to file!: ${(err as Error).message}`);
+    console.log(`Unable to log to file!: ${(err as Error).message}\n${(err as Error).stack}`);
   }
 };
 
