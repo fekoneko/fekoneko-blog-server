@@ -15,6 +15,8 @@ process.on('uncaughtException', (err) => {
   process.exit(1);
 });
 
+app.use(express.json());
+
 app.use((req, res, next) => {
   const origin: string | undefined = req.get('Origin');
   if (origin !== undefined && ALLOWED_ORIGINS.includes(origin)) {
@@ -24,8 +26,6 @@ app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Methods', 'PATCH,DELETE');
   next();
 });
-
-app.use(express.json());
 
 app.use((req, res, next) => {
   log(`${req.method} ${req.url}`);
@@ -56,11 +56,11 @@ app.post(POSTS_API, async (req, res) => {
 });
 
 app.patch(`${POSTS_API}/:id`, async (req, res) => {
-  // if (typeof +req.params.id !== 'number') {
-  //   res.statusCode = 400; // Bad Request
-  //   res.send('Incorrect ID');
-  //   return;
-  // }
+  if (isNaN(+req.params.id)) {
+    res.statusCode = 400; // Bad Request
+    res.send('Incorrect ID');
+    return;
+  }
   const editId: number = +req.params.id;
   const parsedUpdatedFields: object = req.body;
   const updatedFields: Partial<PostInterface> = validatePostPartial(parsedUpdatedFields);
@@ -74,11 +74,11 @@ app.patch(`${POSTS_API}/:id`, async (req, res) => {
 });
 
 app.delete(`${POSTS_API}/:id`, async (req, res) => {
-  // if (typeof +req.params.id !== 'number') {
-  //   res.statusCode = 400; // Bad Request
-  //   res.send('Incorrect ID');
-  //   return;
-  // }
+  if (isNaN(+req.params.id)) {
+    res.statusCode = 400; // Bad Request
+    res.send('Incorrect ID');
+    return;
+  }
   const deleteId: number = +req.params.id;
   if (!(await deletePost(deleteId))) {
     res.statusCode = 500; // Internal Server Error
