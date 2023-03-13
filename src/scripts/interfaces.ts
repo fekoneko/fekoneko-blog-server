@@ -3,5 +3,6 @@ export interface PostInterface {
   title: string;
   content: string;
   author: string;
-  publishTime: number;
+  publishTime?: number;
+  editTime?: number;
 }

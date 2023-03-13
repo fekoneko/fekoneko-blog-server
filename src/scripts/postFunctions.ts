@@ -1,6 +1,6 @@
 import { existsSync } from 'fs';
 import { mkdir, readFile, writeFile } from 'fs/promises';
-import { DATA_DIR, DATA_ENCODING, POSTS_DATA_PATH } from './config';
+import { DATA_DIR, DATA_ENCODING, POSTS_DATA_PATH } from '../config';
 import { PostInterface } from './interfaces';
 import log from './log';
 
@@ -9,7 +9,7 @@ const postTemplate: PostInterface = {
   title: '',
   content: '',
   author: '',
-  publishTime: 0,
+  // publishTime: 0,
 };
 
 const idExists = (posts: Array<Required<PostInterface>>, id: number): boolean =>
@@ -25,12 +25,12 @@ const findNewId = (posts: Array<Required<PostInterface>>): number => {
   do {
     newId = posts[posts.length - shift].id + 1;
     shift++;
-    if (shift > posts.length) return 1; // Nevers
+    if (shift > posts.length) return 1; // Never
   } while (idExists(posts, newId));
   return newId;
 };
 
-export const validatePost = (post: object, includeId: boolean): PostInterface | null => {
+export const validatePost = (post: object): PostInterface | null => {
   const validPost: PostInterface = postTemplate;
   for (const field in postTemplate) {
     if (
@@ -38,11 +38,6 @@ export const validatePost = (post: object, includeId: boolean): PostInterface | 
       typeof post[field as keyof object] === typeof postTemplate[field as keyof PostInterface]
     ) {
       validPost[field as keyof PostInterface] = post[field as keyof object];
-    } else return null;
-  }
-  if (includeId) {
-    if ('id' in post && typeof post.id === 'number' && post.id >= 1) {
-      validPost.id = post.id;
     } else return null;
   }
   return validPost;
@@ -59,9 +54,6 @@ export const validatePostPartial = (postPartial: object): Partial<PostInterface>
       validPostPartial[field as keyof PostInterface] = postPartial[field as keyof object];
     }
   }
-  if ('id' in postPartial && typeof postPartial.id === 'number' && postPartial.id >= 1) {
-    validPostPartial.id = postPartial.id;
-  }
   return validPostPartial;
 };
 
@@ -76,8 +68,11 @@ export const addPost = async (newPost: PostInterface): Promise<boolean> => {
     }
 
     const posts: Array<Required<PostInterface>> = JSON.parse(postsJson);
-    newPost.id = findNewId(posts);
-    posts.push(newPost as Required<PostInterface>);
+    posts.push({
+      ...newPost,
+      id: findNewId(posts),
+      publishTime: Date.now(),
+    } as Required<PostInterface>);
 
     await writeFile(POSTS_DATA_PATH, JSON.stringify(posts), { encoding: DATA_ENCODING });
     return true;
@@ -102,7 +97,7 @@ export const editPost = async (
     if (editIndex === -1) {
       throw new Error(`Post with id ${editId} does not exist`);
     }
-    posts[editIndex] = { ...posts[editIndex], ...updatedFields };
+    posts[editIndex] = { ...posts[editIndex], ...updatedFields, editTime: Date.now() };
 
     await writeFile(POSTS_DATA_PATH, JSON.stringify(posts), { encoding: DATA_ENCODING });
     return true;
