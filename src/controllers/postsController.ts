@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { existsSync } from 'fs';
 import { POSTS_DATA_PATH } from '../config';
-import { PostInterface } from '../scripts/interfaces';
+import { NewPostInterface } from '../scripts/interfaces';
 import {
   addPost,
   deletePost,
@@ -17,7 +17,7 @@ export const handleGet = (req: Request, res: Response) => {
 
 export const handlePost = async (req: Request, res: Response) => {
   const parsedPost: object = req.body;
-  const validPost: PostInterface | null = validatePost(parsedPost, false);
+  const validPost: NewPostInterface | null = validatePost(parsedPost);
   if (!validPost) {
     res.status(400).json({ error: 'Invalid post object' }); // Bad Request
     return;
@@ -36,7 +36,7 @@ export const handlePatch = async (req: Request, res: Response) => {
     return;
   }
   const parsedUpdatedFields: object = req.body;
-  const validUpdatedFields: Partial<PostInterface> = validatePostPartial(parsedUpdatedFields);
+  const validUpdatedFields: Partial<NewPostInterface> = validatePostPartial(parsedUpdatedFields);
   if (!(await editPost(validUpdatedFields, editId))) {
     res.status(500).json({ error: 'Server error' }); // Internal Server Error
     return;
