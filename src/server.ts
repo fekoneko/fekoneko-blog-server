@@ -1,13 +1,12 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import log from './log';
-import { PostInterface } from './interfaces';
-import { addPost, deletePost, editPost, validatePost, validatePostPartial } from './postFunctions';
-import { existsSync } from 'fs';
-import { PORT, ALLOWED_ORIGINS, POSTS_API, POSTS_DATA_PATH } from './config';
+import { PORT, POSTS_API } from './config';
+import requestLogger from './middleware/requestLogger';
+import responseHeaders from './middleware/responseHeaders';
+import postsRouter from './routes/api/postsRouter';
 
 dotenv.config();
-
 const app = express();
 
 process.on('uncaughtException', (err) => {
@@ -15,77 +14,14 @@ process.on('uncaughtException', (err) => {
   process.exit(1);
 });
 
+app.use(express.urlencoded());
 app.use(express.json());
+app.use(requestLogger());
+app.use(responseHeaders());
+app.use(POSTS_API, postsRouter);
 
-app.use((req, res, next) => {
-  const origin: string | undefined = req.get('Origin');
-  if (origin !== undefined && ALLOWED_ORIGINS.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  }
-  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-  res.setHeader('Access-Control-Allow-Methods', 'PATCH,DELETE');
-  next();
-});
-
-app.use((req, res, next) => {
-  log(`${req.method} ${req.url}`);
-  next();
-});
-
-app.get(POSTS_API, (req, res) => {
-  if (existsSync(POSTS_DATA_PATH)) res.sendFile(POSTS_DATA_PATH);
-  else res.send('[]');
-});
-
-app.post(POSTS_API, async (req, res) => {
-  const parsedPost: object = req.body;
-
-  const validPost: PostInterface | null = validatePost(parsedPost, false);
-  if (!validPost) {
-    res.statusCode = 400; // Bad Request
-    res.send('Invalid post object');
-    return;
-  }
-  if (!(await addPost(validPost))) {
-    res.statusCode = 500; // Internal Server Error
-    res.send('Server error');
-    return;
-  }
-  res.statusCode = 201; // Created
-  res.send(JSON.stringify(validPost));
-});
-
-app.patch(`${POSTS_API}/:id`, async (req, res) => {
-  if (isNaN(+req.params.id)) {
-    res.statusCode = 400; // Bad Request
-    res.send('Incorrect ID');
-    return;
-  }
-  const editId: number = +req.params.id;
-  const parsedUpdatedFields: object = req.body;
-  const updatedFields: Partial<PostInterface> = validatePostPartial(parsedUpdatedFields);
-  if (!(await editPost(updatedFields, editId))) {
-    res.statusCode = 500; // Internal Server Error
-    res.send('Server error');
-    return;
-  }
-  res.statusCode = 200; // OK
-  res.send(JSON.stringify(updatedFields));
-});
-
-app.delete(`${POSTS_API}/:id`, async (req, res) => {
-  if (isNaN(+req.params.id)) {
-    res.statusCode = 400; // Bad Request
-    res.send('Incorrect ID');
-    return;
-  }
-  const deleteId: number = +req.params.id;
-  if (!(await deletePost(deleteId))) {
-    res.statusCode = 500; // Internal Server Error
-    res.send('Server error');
-    return;
-  }
-  res.statusCode = 204; // No Content
+app.all('*', (req, res) => {
+  res.statusCode = 404; // Not Found
   res.end();
 });
 
