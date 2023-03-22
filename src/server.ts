@@ -1,12 +1,10 @@
 import express from 'express';
-import dotenv from 'dotenv';
 import log from './scripts/log';
 import { PORT, POSTS_API } from './config';
 import requestLogger from './middleware/requestLogger';
 import responseHeaders from './middleware/responseHeaders';
 import postsRouter from './routes/api/postsRouter';
 
-dotenv.config();
 const app = express();
 
 process.on('uncaughtException', (err) => {
